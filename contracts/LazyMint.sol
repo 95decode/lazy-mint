@@ -13,17 +13,17 @@ contract LazyMint is ERC721, Ownable {
     uint8 private constant _DATA_BITS = 0x60;
     uint8 private constant _ADDRESS_BITS = 0xA0;
 
-    string baseURI;
+    string private _baseURI;
 
     // Mapping from token ID to owner address
     mapping(uint256 => address) private _owners;
 
     function setBaseURI(string memory uri) public onlyOwner {
-        baseURI = uri;
+        _baseURI = uri;
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        return string.concat(baseURI, Strings.toString(tokenId));
+        return string.concat(_baseURI, Strings.toString(tokenId));
     }
 
     function ownerOf(uint256 tokenId) public view override returns (address) {
