@@ -13,34 +13,52 @@ contract LazyMint is ERC721, Ownable {
     uint8 private constant _DATA_BITS = 0x60;
     uint8 private constant _ADDRESS_BITS = 0xA0;
 
-    string private _baseURI;
+    string private baseURI;
 
-    // Mapping from token ID to owner address
-    mapping(uint256 => address) private _owners;
+    mapping(uint256 => bool) private _isMinted;
 
     function setBaseURI(string memory uri) public onlyOwner {
-        _baseURI = uri;
+        baseURI = uri;
+    }
+
+    function _baseURI() internal view virtual override returns (string memory) {
+        return baseURI;
     }
 
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        return string.concat(_baseURI, Strings.toString(tokenId));
+        return bytes(baseURI).length > 0 ? string.concat(baseURI, Strings.toString(tokenId)) : "";
     }
 
     function ownerOf(uint256 tokenId) public view override returns (address) {
-        return (tokenId > _DATA_MAX) ? address(uint160(tokenId >> _DATA_BITS)) : _owners[tokenId];
+        return isMinted(tokenId) ? ERC721.ownerOf(tokenId) : address(uint160(tokenId >> _DATA_BITS));
     }
 
-    function isLazy(uint256 tokenId) public pure returns (bool) {
-        return (tokenId > _DATA_MAX) ? true : false;
+    function isMinted(uint256 tokenId) public view returns (bool) {
+        return _isMinted[tokenId];
     }
 
-    function test(uint256 tokenId) public pure returns (string memory) {
+    function _beforeTokenTransfer(address from, address to, uint256 tokenId) internal virtual override {
+        require(isMinted(tokenId), "LazyMint: token must be minted");
+
+        super._beforeTokenTransfer(from, to, tokenId);
+    }
+
+    function mint(address to, uint256 tokenId) public {
+        require(!isMinted(tokenId), "LazyMint: token already minted");
+        require(address(uint160(tokenId >> _DATA_BITS)) == msg.sender, "LazyMint: Authentication failed");
+
+        _isMinted[tokenId] = true;
+        _mint(to, tokenId);
+    }
+
+    function extraData(uint256 tokenId) public pure returns (string memory) {
         //14281678025072077510098302955713827138388214222487638049951095717887
+        //41260920106969412157321674113669319076297763250256958714528979889499376975871
 
         tokenId <<= _ADDRESS_BITS;
-        string memory a = Strings.toHexString(tokenId >> _ADDRESS_BITS, 12);
+        string memory _extraData = Strings.toHexString(tokenId >> _ADDRESS_BITS, 12);
 
-        return a;
+        return _extraData;
         /*
         string memory a = Strings.toHexString(tokenId, 32);
         bytes memory b = new bytes(12);
